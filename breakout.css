@@ -1,0 +1,56 @@
+body {
+  margin: 0;
+  background: blue;
+}
+
+main#game {
+  position: relative;
+  margin: 10vh auto;
+  width: 80vmin;
+  aspect-ratio: 1;
+  background: black;
+
+  #blocks {
+    position: relative;
+    top: 12.5%;
+    left: 10%;
+    width: 80%;
+    height: 13.6%;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    column-gap: 1.5%;
+    row-gap: 8%;
+    background: transparent;
+  }
+  .row-1 {
+    background: red;
+  }
+  .row-2 {
+    background: rgb(138, 43, 226);
+  }
+  .row-3 {
+    background: hotpink;
+  }
+  div {
+    border-radius: 6px;
+  }
+  #paddle {
+    height: 3.125%;
+    width: 16%;
+    position: absolute;
+    background: white;
+    border-radius: 10px;
+    visibility: hidden;
+  }
+  #ball {
+    width: 4%;
+    aspect-ratio: 1;
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    visibility: hidden;
+  }
+}
+
+
