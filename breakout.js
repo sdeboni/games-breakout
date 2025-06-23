@@ -1,4 +1,4 @@
-const initialSpeed = 5; // px/sec
+const initialSpeed = 500; // px/sec
 const paddle = {};
 const ball = {};
 const blocks = {};
@@ -43,6 +43,8 @@ window.addEventListener("DOMContentLoaded", () => {
 
   paddle.top = gameRect.height - (1.5 * paddle.height);
   paddle.left = (gameRect.width - paddle.width)/2;
+  paddle.right = paddle.left + paddle.width;
+
   paddle.maxRight = game.width - paddle.width;
 
   paddle.ele.style.top = `${paddle.top}px`;
@@ -113,40 +115,59 @@ function travel(elapsed) {
   } else {
     ball.cy = y;
   }
+
 }
 
 function updatePosition() {
-  console.log(ball.left, ball.cx, ball.radius)
   ball.left = ball.cx - ball.radius;
   ball.top = ball.cy - ball.radius;
 }
 
 function handleCollision() {
-  if (hitLeft()) {
-  } else if (hitRight()) {
-  } else if (hitTop()) {
-  } else if (hitBottom()) {
-  } else if (hitPaddle()) {
-  } else if (hitBlock()) {
+  if (collisionSide()) {
+  } else if (collisionBottom()) {
+    isGameOver = true;
+  } else if (collisionPaddle()) {
+  } else if (collisionBlock()) {
   }
 }
 
-function hitLeft() {
+function collisionSide() {
+  if (ball.cx <= ball.minX ||
+    ball.cx >= ball.maxX) {
+    ball.dx = -1 * ball.dx; 
+    return true;
+  } else if (ball.cy <= ball.minY) { 
+    ball.dy = -1 * ball.dy;
+    return true;
+  }
   return false;
 }
-function hitRight() {
+
+function collisionBottom() {
+  return ball.cy >= ball.maxY;
+}
+
+function collisionPaddle() {
+  if (ball.cx >= paddle.left - (ball.radius/4) && 
+    ball.cx <= paddle.right + (ball.radius/4) && 
+    ball.cy >= paddle.top - 10) {
+
+    if (ball.cx > paddle.right - 10) {
+      ball.dy = -1 * ball.dy;
+      ball.dx = -1 * ball.dx;
+    } else if (ball.cx < paddle.left + 10) {
+      ball.dy = -1 * ball.dy;
+      ball.dx = -1 * ball.dx;
+    } else {
+      ball.cy = paddle.top - ball.radius;
+      ball.dy = -1 * ball.dy;
+    }
+    return true;
+  }
   return false;
 }
-function hitTop() {
-  return false;
-}
-function hitBottom() {
-  return false;
-}
-function hitPaddle() {
-  return false;
-}
-function hitBlock() {
+function collisionBlock() {
   return false;
 }
 
@@ -184,5 +205,5 @@ function gameloop(timestamp) {
   }
   renderBall();
 
-  //requestAnimationFrame(gameloop);
+  requestAnimationFrame(gameloop);
 }
