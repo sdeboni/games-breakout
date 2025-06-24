@@ -1,14 +1,18 @@
-const initialSpeed = 500; // px/sec
+const initialSpeed = 200; // px/sec
 const paddle = {};
 const ball = {};
 const blocks = {};
 
 let isGameOver = false;
+let isGameWon = false;
+let pause = false;
 
 window.addEventListener("DOMContentLoaded", () => {
   // add blocks
-  blocks.block = [];
+  blocks.array = [];
   blocks.ele = document.querySelector("#blocks");
+
+  const gameRect = document.querySelector("#game").getBoundingClientRect();
 
   // Build blocks
   for (let row = 1; row < 4; row++) {
@@ -21,18 +25,18 @@ window.addEventListener("DOMContentLoaded", () => {
 
       const block = {
         ele: div,
-        top: rect.top,
-        left: rect.left,
-        bottom: rect.top + rect.height,
-        right: rect.left + rect.width,
+        top: rect.top - gameRect.top,
+        left: rect.left - gameRect.left,
         width: rect.width,
         height: rect.height,
+				visible: true,
       };
-      blocks.block.push(block);
+
+			block.right = block.left + block.width;
+			block.bottom = block.top + block.height;
+      blocks.array.push(block);
     }
   }
-
-  const gameRect = document.querySelector("#game").getBoundingClientRect();
 
   // Position paddle
   paddle.ele = document.querySelector("#paddle");
@@ -44,8 +48,6 @@ window.addEventListener("DOMContentLoaded", () => {
   paddle.top = gameRect.height - (1.5 * paddle.height);
   paddle.left = (gameRect.width - paddle.width)/2;
   paddle.right = paddle.left + paddle.width;
-
-  paddle.maxRight = game.width - paddle.width;
 
   paddle.ele.style.top = `${paddle.top}px`;
   paddle.ele.style.left = `${paddle.left}px`;
@@ -75,24 +77,33 @@ window.addEventListener("DOMContentLoaded", () => {
   ball.ele.style.visibility = "visible";
 
   const minOffsetLeft = paddle.width/2;
-  const maxOffsetRight = game.width - (paddle.width/2);
+  const maxRight = gameRect.width - paddle.width;
+  const maxOffsetRight = gameRect.width - (paddle.width/2);
   
   // Add mobility to paddle 
-  document.addEventListener("mousemove", event => {
-    const offset = event.pageX - gameRect.left;
-    if (offset < 0 || offset > game.width || isGameOver) {
+  document.addEventListener("mousemove", e => {
+    const offset = e.pageX - gameRect.left;
+    if (isGameOver) {
       return;
     }
 
     if (offset < minOffsetLeft) {
       paddle.left = 0; 
-    } else if (offset > paddle.maxOffsetRight) {
-      paddle.left = paddle.maxRight;
+    } else if (offset > maxOffsetRight) {
+      paddle.left = maxRight;
     } else {
       paddle.left = offset - (paddle.width/2) ;
     }
+		paddle.right = paddle.left + paddle.width;
   });
 
+	document.addEventListener("mousedown", () => {
+		pause = !pause;
+		if (!pause) {
+			lastRender = undefined;
+			requestAnimationFrame(gameloop);
+		}
+	});
   requestAnimationFrame(gameloop);
 });
 
@@ -116,6 +127,10 @@ function travel(elapsed) {
     ball.cy = y;
   }
 
+  const top = ball.cy - ball.radius;
+  const left = ball.cx - ball.radius;
+  const bottom = top + ball.diameter;
+  const right = left + ball.diameter;
 }
 
 function updatePosition() {
@@ -154,11 +169,15 @@ function collisionPaddle() {
     ball.cy >= paddle.top - 10) {
 
     if (ball.cx > paddle.right - 10) {
+			if (ball.dx < 0) {
+				ball.dx = -1 * ball.dx;
+			}
       ball.dy = -1 * ball.dy;
-      ball.dx = -1 * ball.dx;
     } else if (ball.cx < paddle.left + 10) {
+			if (ball.dx > 0) {
+				ball.dx = -1 * ball.dx;
+			}
       ball.dy = -1 * ball.dy;
-      ball.dx = -1 * ball.dx;
     } else {
       ball.cy = paddle.top - ball.radius;
       ball.dy = -1 * ball.dy;
@@ -167,19 +186,82 @@ function collisionPaddle() {
   }
   return false;
 }
+
 function collisionBlock() {
-  return false;
+  const top = ball.cy - ball.radius;
+  const left = ball.cx - ball.radius;
+  const bottom = top + ball.diameter;
+  const right = left + ball.diameter;
+
+  let visibleBlockCount = blocks.array.length;
+	for (const block of blocks.array) {
+		if (!block.visible) {
+			visibleBlockCount--;
+			continue;
+		}
+		if (top <= block.bottom &&
+			bottom >= block.top &&
+			left <= block.right &&
+			right >= block.left) {
+      block.visible = false;
+      block.ele.style.visibility = "hidden";
+
+			if (ball.cx > block.right - 10 && ball.cy < block.top + 10) {
+				if (ball.dx < 0) {
+					ball.dx = -1 * ball.dx;
+				}
+				ball.dy = -1 * ball.dy;
+			} else if (ball.cx < block.left + 10 && ball.cy < block.top + 10) {
+				if (ball.dx > 0) {
+					ball.dx = -1 * ball.dx;
+				}
+				ball.dy = -1 * ball.dy;
+			} else if (ball.cx > block.right - 10 && ball.cy > block.bottom - 10) {
+				if (ball.dx < 0) {
+					ball.dx = -1 * ball.dx;
+				}
+				ball.dy = -1 * ball.dy;
+			} else if (ball.cx < block.left + 10 && ball.cy > block.bottom - 10) {
+				if (ball.dx > 0) {
+					ball.dx = -1 * ball.dx;
+				}
+				ball.dy = -1 * ball.dy;
+			} else if (ball.cx > block.right || ball.cx < block.left) {
+        ball.dx = -1 * ball.dx; 
+			} else if (ball.cy > block.bottom || ball.cy < block.top) {
+        ball.dy = -1 * ball.dy;
+			}
+      break;
+		}
+  }
+	isGameOver = visibleBlockCount == 0;
 }
 
 function showGameOver() {
   const game = document.querySelector("#game");
-  game.style.background = "darkred";
+	let won = true;
+	for (const block of blocks.array) {
+		if (block.visible) {
+			won = false;
+			break;
+		}
+	}
+	if (won) {
+		game.style.background = "green";
+	} else {
+		game.style.background = "darkred";
+	}
   paddle.ele.style.opacity = "0.2";
 }
 
 function renderBall() {
   ball.ele.style.top = `${ball.top}px`;
   ball.ele.style.left = `${ball.left}px`;
+}
+
+function renderPaddle() {
+  paddle.ele.style.top = `${paddle.top}px`;
+  paddle.ele.style.left = `${paddle.left}px`;
 }
 
 let lastRender;
@@ -199,11 +281,14 @@ function gameloop(timestamp) {
   updatePosition();
   handleCollision();
 
+  renderBall();
+	renderPaddle();
+
   if (isGameOver) {
     showGameOver();
     return;
   }
-  renderBall();
-
-  requestAnimationFrame(gameloop);
+	if (!pause) {
+		requestAnimationFrame(gameloop);
+	}
 }
