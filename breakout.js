@@ -1,10 +1,11 @@
-const initialSpeed = 200; // px/sec
+const initialSpeed = 400; // px/sec
+const maxSpeed = initialSpeed * 1.5;
+const minSpeed = initialSpeed * 0.75;
 const paddle = {};
 const ball = {};
 const blocks = {};
 
 let isGameOver = false;
-let isGameWon = false;
 let pause = false;
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -48,6 +49,7 @@ window.addEventListener("DOMContentLoaded", () => {
   paddle.top = gameRect.height - (1.5 * paddle.height);
   paddle.left = (gameRect.width - paddle.width)/2;
   paddle.right = paddle.left + paddle.width;
+  paddle.center = paddle.left + (paddle.width/2);
 
   paddle.ele.style.top = `${paddle.top}px`;
   paddle.ele.style.left = `${paddle.left}px`;
@@ -95,6 +97,7 @@ window.addEventListener("DOMContentLoaded", () => {
       paddle.left = offset - (paddle.width/2) ;
     }
 		paddle.right = paddle.left + paddle.width;
+    paddle.center = paddle.left + (paddle.width/2);
   });
 
 	document.addEventListener("mousedown", () => {
@@ -126,11 +129,6 @@ function travel(elapsed) {
   } else {
     ball.cy = y;
   }
-
-  const top = ball.cy - ball.radius;
-  const left = ball.cx - ball.radius;
-  const bottom = top + ball.diameter;
-  const right = left + ball.diameter;
 }
 
 function updatePosition() {
@@ -166,22 +164,54 @@ function collisionBottom() {
 function collisionPaddle() {
   if (ball.cx >= paddle.left - (ball.radius/4) && 
     ball.cx <= paddle.right + (ball.radius/4) && 
-    ball.cy >= paddle.top - 10) {
+    ball.cy > paddle.top - ball.radius) {
 
-    if (ball.cx > paddle.right - 10) {
+    if (ball.cx > paddle.right - (ball.radius/2)) {
 			if (ball.dx < 0) {
+        ball.dx = Math.max(ball.dx*2, -maxSpeed)
 				ball.dx = -1 * ball.dx;
-			}
-      ball.dy = -1 * ball.dy;
-    } else if (ball.cx < paddle.left + 10) {
+			} else if (ball.dx == 0 ) {
+        ball.dx = initialSpeed;
+      }
+    } else if (ball.cx < paddle.left + (ball.radius/2)) {
 			if (ball.dx > 0) {
+        ball.dx = Math.min(ball.dx*2, maxSpeed);
 				ball.dx = -1 * ball.dx;
-			}
-      ball.dy = -1 * ball.dy;
+			} else if (ball.dx == 0) {
+        ball.dx = -initialSpeed;
+      }
+    } else if (ball.cx < paddle.center+(ball.radius/2) && ball.cx > paddle.center-(ball.radius/2)) {
+        ball.dx = 0;
+        ball.dy = Math.max(3 * ball.dy/4, minSpeed);
     } else {
+      if (ball.dx == 0) {
+        if (ball.cx < paddle.center) {
+          ball.dx = -initialSpeed * 0.1;
+        } else {
+          ball.dx = initialSpeed * 0.1;
+        }
+      }
+      let v = Math.abs(2 * (ball.cx-paddle.center)/(paddle.width/2))
+
+      let x = Math.abs(ball.dx);
+      let y = Math.abs(ball.dy);
+
+      const dx = Math.max(Math.min(v * Math.abs(ball.dx), maxSpeed), minSpeed)
+      const dy = Math.max(Math.min(v * Math.abs(ball.dy), maxSpeed), minSpeed)
+
+      if (ball.dx > 0) {
+        ball.dx = dx
+      } else {
+        ball.dx = -dx;
+      }
+      if (ball.dy > 0) {
+        ball.dy = dy;
+      } else {
+        ball.dy = -dy;
+      }
       ball.cy = paddle.top - ball.radius;
-      ball.dy = -1 * ball.dy;
     }
+    ball.dy = -1 * ball.dy;
     return true;
   }
   return false;
